@@ -1,0 +1,19 @@
+body{
+	margin: 0;
+}
+#gameArea{
+	height: 100vh;
+	width: 100vw;
+	position: relative;
+}
+
+.box{
+	width: 20px;
+	height: 20px;
+	border: 1px solid black;
+	background-color: lavender;
+	position: absolute;
+}
+.livePlayer{
+	background-color: red;
+}
