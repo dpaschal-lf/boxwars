@@ -39,7 +39,6 @@ class BoxWarsGame{
 	}
 	handleLaunch(destination, velocity){
 		console.log('got launch notification');
-		debugger;
 		this.server.send(JSON.stringify({type: 'launch', data: {destination, velocity}}));
 	}
 	handleDown(event){

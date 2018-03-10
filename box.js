@@ -3,6 +3,9 @@
 class BoxObject{
 	constructor(name, location, handlers){
 		this.timeSlice = 10;
+		console.log('worker constructed');
+		this.heartbeat = new Worker('timerWorker.js');
+		this.heartbeat.addEventListener('message', this.update.bind(this));
 		this.intervalsPerSecond = 1000 / this.timeSlice;
 		this.timer = null;
 		this.domElement = null;
@@ -48,6 +51,9 @@ class BoxObject{
 		acceptedHandlers.forEach(
 			handlerName => this.handlers[handlerName] = handlers[handlerName] ? handlers[handlerName] : ()=>{console.log('no op');}
 		);
+		document.addEventListener('blur', function(){
+			console.log('lost focus');
+		})
 
 	}
 	updateLocation(newLoc){
@@ -101,14 +107,17 @@ class BoxObject{
 		this.updateQueue.callSequence();
 	}
 	start(){
-		this.stop();
-		this.timer = setInterval(this.update.bind(this), this.timeSlice);
+		//this.stop();
+		//this.timer = setInterval(this.update.bind(this), this.timeSlice);
+		this.heartbeat.postMessage({message: 'start', data: {timeSlice: this.timeSlice}});
 	}
 	stop(){
+		/*
 		if(this.timer){
 			clearInterval(this.timer);
 			this.timer = null;			
-		}
+		}*/
+		this.headtbeat.postMessage({message:'stop'});
 	}
 }
 
