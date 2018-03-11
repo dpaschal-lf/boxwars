@@ -3,12 +3,15 @@
 class BoxObject{
 	constructor(name, location, handlers){
 		this.timeSlice = 10;
+		this.maxHitpoints = 100;
+		this.hitpoints = this.maxHitpoints;
 		console.log('worker constructed');
 		this.heartbeat = new Worker('timerWorker.js');
 		this.heartbeat.addEventListener('message', this.update.bind(this));
 		this.intervalsPerSecond = 1000 / this.timeSlice;
 		this.timer = null;
 		this.domElement = null;
+		this.backgroundColor = null;
 		this.name = name;
 		this.chargePerSecond = 100;
 		this.chargePerMS = this.chargePerSecond / 1000;
@@ -23,11 +26,15 @@ class BoxObject{
 		this.velocityPerInterval = null;
 		this.deltaMove = {x: null, y: null};
 		this.changeVector = this.initialChangeVector;
+		this.adjustColor = this.adjustColorInitial;
 		this.handlers = {};
 		if(handlers){
 			this.attachHandlers(handlers);
 		}
 		this.start();
+	}
+	getSpeed(){
+		return this.velocityPerInterval || 0;
 	}
 	getDimensions(){
 		return {
@@ -36,6 +43,9 @@ class BoxObject{
 			right: this.location.x + this.size.width,
 			bottom: this.location.y + this.size.height
 		}
+	}
+	getName(){
+		return this.name;
 	}
 	delete(){
 
@@ -47,7 +57,7 @@ class BoxObject{
 		return this.domElement;
 	}
 	attachHandlers(handlers){
-		const acceptedHandlers = ['launch'];
+		const acceptedHandlers = ['launch','move'];
 		acceptedHandlers.forEach(
 			handlerName => this.handlers[handlerName] = handlers[handlerName] ? handlers[handlerName] : ()=>{console.log('no op');}
 		);
@@ -63,10 +73,39 @@ class BoxObject{
 		this.domElement.style.left = this.location.x + 'px';
 		this.domElement.style.top = this.location.y + 'px';	
 	}
+	takeDamage(amount){
+		this.hitpoints -= amount;
+		if(this.hitpoints <= 0){
+			this.die();
+			return;
+		}
+		console.log('taking damage: '+amount);
+		var hitpointPercent = this.hitpoints / this.maxHitpoints;
+		this.adjustColor(hitpointPercent);
+	}
+	adjustColorInitial(percent){
+		let rgb = window.getComputedStyle( this.domElement , null).getPropertyValue( 'background-color' );
+		rgb = rgb.slice(4, -1);
+		var rgbArray = rgb.split(',').map( val => parseFloat(val.trim()));
+		this.backgroundColor = {r: rgbArray[0], g: rgbArray[1], b: rgbArray[2]};
+		this.adjustColor = this.adjustColorSubsequent;
+		this.adjustColorSubsequent(percent);
+	}
+	adjustColorSubsequent(percent){
+		debugger;
+		let newBackgroundColor = `rgb(${(this.backgroundColor.r*percent)>>0},${(this.backgroundColor.g*percent)>>0},${(this.backgroundColor.b*percent)>>0})`
+		console.log('new color: '+ newBackgroundColor)
+		this.domElement.style.backgroundColor = newBackgroundColor;
+
+	}
+	die(){
+		this.stop();
+		this.domElement.remove();
+	}
 	initialChangeVector(newLocation, velocity){
 		//get center
-		this.centerPoint.x = this.location.x + this.domElement.offsetWidth;
-		this.centerPoint.y = this.location.y + this.domElement.offsetHeight;
+		this.centerPoint.x = this.location.x + this.size.Height;
+		this.centerPoint.y = this.location.y + this.size.Width;
 		this.changeVector = this.subsequentChangeVector;
 		this.subsequentChangeVector(newLocation, velocity);
 	}
@@ -86,6 +125,10 @@ class BoxObject{
 		this.deltaMove.y = Math.sin(radians) * this.velocityPerInterval * mult;
 		this.updateQueue.add( this.move.bind(this) );
 	}
+	setDimensions(){
+		this.size.height = this.domElement.offsetHeight;
+		this.size.width = this.domElement.offsetWidth;
+	}
 	startCharge(clickPoint){
 		this.lastClickPoint = clickPoint;
 		this.startChargeTime = window.performance.now();
@@ -102,6 +145,11 @@ class BoxObject{
 			return;
 		}
 		this.updateLocation( { x: this.location.x+this.deltaMove.x, y: this.location.y+this.deltaMove.y})
+		this.handlers.move(this);
+	}
+	stopMove(){
+		this.movesToDestination = 0;
+		this.updateLocation( { x: this.location.x+this.deltaMove.x, y: this.location.y+this.deltaMove.y})
 	}
 	update(){
 		this.updateQueue.callSequence();
@@ -117,7 +165,7 @@ class BoxObject{
 			clearInterval(this.timer);
 			this.timer = null;			
 		}*/
-		this.headtbeat.postMessage({message:'stop'});
+		this.heartbeat.postMessage({message:'stop'});
 	}
 }
 

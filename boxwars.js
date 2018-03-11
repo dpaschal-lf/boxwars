@@ -10,7 +10,7 @@ class BoxWarsGame{
 
 	playerConnect(name, location, live=false){
 		location = location || this.getRandomGameLocation();
-		const player = new BoxObject(name, location, {launch: this.handleLaunch.bind(this)});
+		const player = new BoxObject(name, location, {launch: this.handleLaunch.bind(this), move: this.handleMove.bind(this)});
 		const playerDom = player.render();
 		console.log('making new player: '+player.name,location);
 		if(live){
@@ -21,6 +21,7 @@ class BoxWarsGame{
 		console.log('test: ',player);
 		this.players[name] = player;
 		this.gameArea.appendChild(playerDom);
+		player.setDimensions();
 	}
 	playerDisconnect(name){
 		if(this.players[name]){
@@ -49,6 +50,9 @@ class BoxWarsGame{
 		console.log('ending charge');
 		this.livePlayer.releaseCharge();
 		//this.livePlayer.changeVector({x: event.offsetX, y: event.offsetY}, 100);
+	}
+	handleMove(box){
+		this.checkCollissionAmongBoxes(box.getName());
 	}
 	communicateAction(message){
 		this.server.send(message);
@@ -95,19 +99,31 @@ class BoxWarsGame{
 	 		console.log('connection closed'); 
        };
 	}
-	checkCollissionAmongBoxes(){
-		for(var key1 in this.players){
+	handleCollision(collider, collidee){
+		console.log('collisions: ', collider, collidee);
+		var colliderSpeed = collider.getSpeed();
+		var colliderDamage = colliderSpeed
+		var collideeDamage = colliderSpeed*10;
+		collider.stopMove();
+		collider.takeDamage(colliderDamage);
+		collidee.stopMove();
+		collidee.takeDamage(collideeDamage);
+	}
+	checkCollissionAmongBoxes(key1){
+		//for(var key1 in this.players){
 			for(var key2 in this.players){
+				console.log(' checking '+key1+ ' vs ' +key2);
 				if(this.players[key1]!==this.players[key2] 
 					&& this.checkCollission(
 						this.players[key1].getDimensions(), 
 						this.players[key2].getDimensions()
 					   )
 				){
-					console.log('collision between '+this.players[key1].name + ' and '+this.players[key2].name);
+					this.handleCollision(this.players[key1], this.players[key2]);
+					//console.log('collision between '+this.players[key1].name + ' and '+this.players[key2].name);
 				}
 			}
-		}
+		//}
 	}
 	checkCollission(obj1, obj2){
 		if(obj1.right < obj2.left
